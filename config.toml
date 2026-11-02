@@ -1,0 +1,90 @@
+# Leasing-Radar – Einstellungen
+# Änderungen werden beim nächsten täglichen Lauf übernommen (oder sofort über „Run workflow“).
+
+[search]
+max_rate = 150          # höchste Monatsrate in Euro (inkl. MwSt.)
+customer = "privat"     # privat | gewerbe | beide
+condition = "alle"      # alle | neu | gebraucht
+
+[http]
+# Ehrlicher User-Agent: Das Skript gibt sich nicht als normaler Browser aus.
+user_agent = "Mozilla/5.0 (compatible; LeasingRadar/1.0; persönliches Projekt)"
+delay_seconds = 2.5     # Pause zwischen zwei Abrufen beim selben Portal
+timeout_seconds = 30
+respect_robots = true   # robots.txt der Portale beachten
+
+[output]
+data_file = "docs/data/offers.json"
+history_file = "data/history.json"
+debug_dir = "debug"
+
+# ------------------------------------------------------------------------------------------
+# Quellen. Jede Quelle braucht mindestens eine Start-URL mit Angebotsliste.
+# Tipp: Wenn ein Portal nichts liefert, im Browser die Liste mit Filter „bis 150 €“ öffnen,
+# die Adresse kopieren und hier als start_urls eintragen.
+# ------------------------------------------------------------------------------------------
+
+[[source]]
+id = "leasingmarkt"
+name = "LeasingMarkt.de"
+enabled = true
+# Privatleasing, Rate bis 150 € – der Filter läuft direkt über die Adresse (tg=PRIVATE, mglpt=150).
+start_urls = ["https://www.leasingmarkt.de/listing?tg=PRIVATE&nc=1&mglpt=150"]
+page_params = ["page", "pg", "p"]
+max_pages = 60
+default_customer = "privat"
+link_hint = "/leasing/pkw/"
+
+[[source]]
+id = "mobile"
+name = "mobile.de"
+enabled = true
+# Übersichtsseite plus Markenseiten. Nicht vorhandene Markenseiten werden übersprungen.
+start_urls = [
+  "https://www.mobile.de/leasing/unter-150-euro/",
+  "https://www.mobile.de/leasing/volkswagen/unter-150-euro/",
+  "https://www.mobile.de/leasing/opel/unter-150-euro/",
+  "https://www.mobile.de/leasing/seat/unter-150-euro/",
+  "https://www.mobile.de/leasing/skoda/unter-150-euro/",
+  "https://www.mobile.de/leasing/dacia/unter-150-euro/",
+  "https://www.mobile.de/leasing/fiat/unter-150-euro/",
+  "https://www.mobile.de/leasing/citroen/unter-150-euro/",
+  "https://www.mobile.de/leasing/peugeot/unter-150-euro/",
+  "https://www.mobile.de/leasing/renault/unter-150-euro/",
+  "https://www.mobile.de/leasing/toyota/unter-150-euro/",
+  "https://www.mobile.de/leasing/hyundai/unter-150-euro/",
+  "https://www.mobile.de/leasing/kia/unter-150-euro/",
+  "https://www.mobile.de/leasing/suzuki/unter-150-euro/",
+  "https://www.mobile.de/leasing/mazda/unter-150-euro/",
+  "https://www.mobile.de/leasing/ford/unter-150-euro/",
+  "https://www.mobile.de/leasing/cupra/unter-150-euro/",
+  "https://www.mobile.de/leasing/mini/unter-150-euro/",
+]
+page_params = ["page"]
+max_pages = 10
+link_hint = "/leasing/"
+
+[[source]]
+id = "nullleasing"
+name = "Null-Leasing"
+enabled = true
+start_urls = [
+  "https://www.null-leasing.com/leasing-unter-150-euro",
+  "https://www.null-leasing.com/vw-leasing/unter-150-euro",
+]
+page_params = ["page"]
+max_pages = 25
+link_hint = "/angebote/"
+
+[[source]]
+id = "goleasy"
+name = "GoLeasy"
+# Standardmäßig aus: Die Gesamtliste hat rund 8.000 Angebote. Für einen sinnvollen Abruf brauchst du
+# die Adresse mit gesetztem Filter „max. Monatsrate 150 €“ und Sortierung „Rate aufsteigend“:
+# im Browser einstellen, Adresse kopieren, unten eintragen, dann enabled = true setzen.
+enabled = false
+start_urls = ["https://www.goleasy.de/leasing/privat"]
+page_params = ["page"]
+max_pages = 40
+sorted_ascending = true
+link_hint = "/leasing/"
