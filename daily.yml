@@ -1,0 +1,83 @@
+name: Tägliche Leasing-Prüfung
+
+on:
+  schedule:
+    - cron: "20 4 * * *" # 04:20 UTC = 06:20 Uhr Sommerzeit / 05:20 Uhr Winterzeit
+  workflow_dispatch: # manuell starten: Reiter „Actions“ → „Run workflow“
+
+permissions:
+  contents: write # Daten ins Repository zurückschreiben
+  pages: write
+  id-token: write
+
+concurrency:
+  group: leasing-radar
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    outputs:
+      failed: ${{ steps.scrape.outcome == 'failure' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Tests
+        run: python -m unittest discover -s tests -t .
+
+      - name: Angebote abrufen
+        id: scrape
+        continue-on-error: true # Ausfall melden, aber Seite trotzdem aktualisieren
+        run: python -m scraper.main
+
+      - name: Debug-HTML sichern (nur wenn ein Portal nichts geliefert hat)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-html
+          path: debug/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Daten ins Repository schreiben
+        run: |
+          git config user.name "leasing-radar"
+          git config user.email "leasing-radar@users.noreply.github.com"
+          git add docs/data data
+          if git diff --cached --quiet; then
+            echo "Keine Änderungen"
+          else
+            git commit -m "Angebote vom $(TZ=Europe/Berlin date +%F)"
+            git push
+          fi
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+  deploy:
+    needs: scrape
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  alert:
+    # Läuft nur, wenn KEIN Portal Angebote geliefert hat. Der Lauf wird rot, GitHub schickt eine E-Mail.
+    needs: [scrape, deploy]
+    if: needs.scrape.outputs.failed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "::error::Kein Portal hat Angebote geliefert. Details im Protokoll von „Angebote abrufen“ und im Artefakt „debug-html“."
+          exit 1
